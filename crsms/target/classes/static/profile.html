@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Profile</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Account</p>
+<h1>Profile</h1>
+<div class="grid split">
+  <form id="profile" class="card">
+    <label>Full name</label><input name="fullName" required/>
+    <label>Department</label><input name="department"/>
+    <p class="note" id="who"></p>
+    <button type="submit">Save profile</button>
+  </form>
+  <form id="password" class="card">
+    <h2>Password</h2>
+    <label>Current password</label><input name="currentPassword" type="password" required/>
+    <label>New password</label><input name="newPassword" type="password" minlength="8" required/>
+    <button type="submit">Update password</button>
+  </form>
+</div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const me = await mountNav();
+  if (!me) return;
+  const form = document.getElementById("profile");
+  form.fullName.value = me.fullName;
+  form.department.value = me.department || "";
+  document.getElementById("who").textContent = me.email + " · " + me.role + " · " + (me.memberLabel || "");
+  form.onsubmit = async (ev) => {
+    ev.preventDefault();
+    try { await api("/api/users/me", { method: "PUT", body: Object.fromEntries(new FormData(form).entries()) }); toast("Profile saved"); }
+    catch (err) { toast(err.message, true); }
+  };
+  document.getElementById("password").onsubmit = async (ev) => {
+    ev.preventDefault();
+    try { await api("/api/users/me/password", { method: "PUT", body: Object.fromEntries(new FormData(ev.target).entries()) }); toast("Password updated"); ev.target.reset(); }
+    catch (err) { toast(err.message, true); }
+  };
+});
+</script>
+
+</body></html>

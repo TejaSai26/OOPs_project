@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Notifications</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Inbox</p>
+<h1>Notifications</h1>
+<div class="actions"><button id="all" class="secondary" type="button">Mark all read</button></div>
+<div id="list"></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const rows = await api("/api/notifications");
+  document.getElementById("list").innerHTML = rows.length ? rows.map(row => `
+    <article class="card" style="margin-top:10px;${row.read ? "opacity:.72" : ""}">
+      <p class="kicker">${escapeHtml(row.type)} · ${when(row.createdAt)}</p>
+      <h3>${escapeHtml(row.title)}</h3>
+      <p>${escapeHtml(row.message)}</p>
+      ${row.read ? "" : `<button class="small read" data-id="${row.id}" type="button">Mark read</button>`}
+    </article>`).join("") : `<p class="empty">You are caught up.</p>`;
+  document.querySelectorAll(".read").forEach(btn => btn.onclick = async () => {
+    try { await api("/api/notifications/" + btn.dataset.id + "/read", { method: "POST" }); load(); }
+    catch (err) { toast(err.message, true); }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => {
+  load().catch(err => toast(err.message, true));
+  document.getElementById("all").onclick = async () => {
+    try { await api("/api/notifications/read-all", { method: "POST" }); toast("Inbox cleared"); load(); }
+    catch (err) { toast(err.message, true); }
+  };
+});
+</script>
+
+</body></html>

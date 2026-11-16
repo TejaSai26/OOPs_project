@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Register</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Account</p>
+<h1>Join the hub</h1>
+<form id="form" class="card" style="max-width:560px">
+  <label>Full name</label><input name="fullName" required maxlength="120"/>
+  <label>Email</label><input name="email" type="email" required/>
+  <label>Password</label><input name="password" type="password" required minlength="8"/>
+  <div class="row">
+    <div><label>Role</label><select name="role"><option>STUDENT</option><option>FACULTY</option><option>STAFF</option></select></div>
+    <div><label>Department</label><input name="department"/></div>
+  </div>
+  <div class="row">
+    <div><label>Member id</label><input name="memberId" placeholder="Optional campus number"/></div>
+    <div><label>Designation or office</label><input name="designation"/></div>
+  </div>
+  <div class="actions"><button type="submit">Create account</button></div>
+</form>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+document.getElementById("form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const data = Object.fromEntries(new FormData(ev.target).entries());
+  try {
+    await api("/api/auth/register", { method: "POST", body: data });
+    toast("Account created. Sign in to continue.");
+    setTimeout(() => location.href = "/login.html", 600);
+  } catch (err) { toast(err.message, true); }
+};
+</script>
+
+</body></html>

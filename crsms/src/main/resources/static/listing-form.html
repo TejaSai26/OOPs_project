@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>List a resource</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Your catalogue</p>
+<h1 id="heading">List a resource</h1>
+<form id="form" class="card" style="max-width:680px">
+  <label>Title</label><input name="title" required maxlength="140"/>
+  <label>Description</label><textarea name="description" required></textarea>
+  <div class="row">
+    <div><label>Category</label><select name="categoryId" required></select></div>
+    <div><label>Pricing</label><select name="pricingType"><option>FREE</option><option>HOURLY</option><option>DAILY</option></select></div>
+    <div><label>Rate</label><input name="rate" type="number" min="0" step="0.01" value="0" required/></div>
+  </div>
+  <div class="actions"><button type="submit">Save listing</button></div>
+</form>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  await mountNav();
+  const id = new URLSearchParams(location.search).get("id");
+  const cats = await api("/api/categories");
+  document.querySelector("[name=categoryId]").innerHTML = cats.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+  if (id) {
+    document.getElementById("heading").textContent = "Edit listing";
+    const item = await api("/api/listings/" + id);
+    const form = document.getElementById("form");
+    form.title.value = item.title;
+    form.description.value = item.description;
+    form.categoryId.value = item.categoryId;
+    form.pricingType.value = item.pricingType;
+    form.rate.value = item.rate;
+  }
+  document.getElementById("form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const data = Object.fromEntries(new FormData(ev.target).entries());
+    data.categoryId = Number(data.categoryId);
+    data.rate = Number(data.rate);
+    try {
+      const saved = id
+        ? await api("/api/listings/" + id, { method: "PUT", body: data })
+        : await api("/api/listings", { method: "POST", body: data });
+      toast("Listing saved");
+      location.href = "/my-listings.html";
+    } catch (err) { toast(err.message, true); }
+  };
+});
+</script>
+
+</body></html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Audit log</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="admin">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Administration</p><h1>Audit history</h1>
+<form id="filters" class="filters">
+  <div><label>Action</label><input name="action" placeholder="PICKUP"/></div>
+  <div><label>Entity type</label><input name="entityType" placeholder="Reservation"/></div>
+</form>
+<button id="apply" type="button">Filter</button>
+<div class="table-wrap card" style="margin-top:12px"><table><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>Description</th></tr></thead><tbody id="rows"></tbody></table></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const params = new URLSearchParams(new FormData(document.getElementById("filters")));
+  for (const [k,v] of [...params.entries()]) if (!v) params.delete(k);
+  const rows = await api("/api/admin/audit?" + params.toString());
+  document.getElementById("rows").innerHTML = rows.map(row => `<tr><td>${when(row.createdAt)}</td><td>${escapeHtml(row.actorName)}</td><td>${escapeHtml(row.action)}</td><td>${escapeHtml(row.entityType)} ${escapeHtml(row.entityId || "")}</td><td>${escapeHtml(row.description)}</td></tr>`).join("") || emptyRow(5, "No audit rows match.");
+}
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("apply").onclick = () => load().catch(err => toast(err.message, true));
+  load().catch(err => toast(err.message, true));
+});
+</script>
+
+</body></html>

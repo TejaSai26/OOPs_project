@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.crsms.service.CampusAcceptanceTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.178 s -- in com.crsms.service.CampusAcceptanceTest

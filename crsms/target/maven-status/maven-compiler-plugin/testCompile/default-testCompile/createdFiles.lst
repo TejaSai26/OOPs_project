@@ -1,0 +1,6 @@
+com/crsms/service/CampusAcceptanceTest.class
+com/crsms/penalty/PenaltyStrategyFactoryTest.class
+com/crsms/pricing/PricingStrategyTest.class
+com/crsms/penalty/PenaltyStrategyTest.class
+com/crsms/service/CampusFlowTest.class
+com/crsms/reservation/ReservationTransitionTest.class

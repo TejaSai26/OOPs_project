@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Browse</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Catalogue</p>
+<h1>Find a resource</h1>
+<form id="filters" class="filters card">
+  <div><label>Name</label><input name="q" placeholder="Bike, laptop, projector"/></div>
+  <div><label>Category</label><select name="categoryId"><option value="">Any</option></select></div>
+  <div><label>Condition</label><select name="condition"><option value="">Any</option><option>NEW</option><option>GOOD</option><option>FAIR</option><option>DAMAGED</option><option>UNDER_MAINTENANCE</option></select></div>
+  <div><label>Owner</label><input name="owner" placeholder="Name"/></div>
+  <div><label>Min price</label><input name="minRate" type="number" min="0" step="0.01"/></div>
+  <div><label>Max price</label><input name="maxRate" type="number" min="0" step="0.01"/></div>
+  <div><label>Sort</label><select name="sort"><option value="newest">Newest</option><option value="popularity">Popularity</option><option value="price_asc">Price, low to high</option><option value="price_desc">Price, high to low</option></select></div>
+  <div><label>Availability</label><select name="availableOnly"><option value="false">All active</option><option value="true">Has a free unit</option></select></div>
+</form>
+<div class="actions"><button id="apply" type="button">Apply filters</button></div>
+<div id="results" class="grid cards"></div>
+<div class="pager"><button class="secondary" id="prev" type="button">Previous</button><span id="page-label"></span><button class="secondary" id="next" type="button">Next</button></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+let page = 0;
+async function load() {
+  const params = new URLSearchParams(new FormData(document.getElementById("filters")));
+  params.set("page", page);
+  params.set("size", "9");
+  for (const [key, value] of [...params.entries()]) if (!value) params.delete(key);
+  const data = await api("/api/listings?" + params.toString());
+  document.getElementById("page-label").textContent = `Page ${data.page + 1} · ${data.total} listings`;
+  document.getElementById("results").innerHTML = data.items.length ? data.items.map(item => `
+    <article class="card">
+      <p class="kicker">${escapeHtml(item.category)} · ${escapeHtml(item.pricingType)}</p>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.description).slice(0, 140)}</p>
+      <p class="note">${escapeHtml(item.ownerName)} · ${money(item.rate)} · borrowed ${item.borrowCount} times</p>
+      <p>${item.availableCount} available · ${stars(item.averageRating)}</p>
+      <a class="btn small" href="/listing.html?id=${item.id}">Details</a>
+    </article>`).join("") : `<p class="empty">No listings match those filters.</p>`;
+  document.getElementById("prev").disabled = data.page === 0;
+  document.getElementById("next").disabled = (data.page + 1) * data.size >= data.total;
+}
+document.addEventListener("DOMContentLoaded", async () => {
+  const cats = await api("/api/categories");
+  document.querySelector("[name=categoryId]").insertAdjacentHTML("beforeend", cats.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join(""));
+  document.getElementById("apply").onclick = () => { page = 0; load().catch(err => toast(err.message, true)); };
+  document.getElementById("prev").onclick = () => { page = Math.max(0, page - 1); load(); };
+  document.getElementById("next").onclick = () => { page += 1; load(); };
+  load().catch(err => toast(err.message, true));
+});
+</script>
+
+</body></html>

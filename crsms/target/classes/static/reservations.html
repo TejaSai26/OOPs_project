@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Reservations</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Schedule</p>
+<h1>Reservations</h1>
+<div class="grid split">
+  <section class="card"><h2>Mine</h2><div class="table-wrap"><table><thead><tr><th>Item</th><th>Window</th><th>Status</th><th></th></tr></thead><tbody id="mine"></tbody></table></div></section>
+  <section class="card"><h2>Requests for my units</h2><div class="table-wrap"><table><thead><tr><th>Borrower</th><th>Item</th><th>Status</th><th></th></tr></thead><tbody id="incoming"></tbody></table></div></section>
+</div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+function actions(row, incoming) {
+  const bits = [];
+  if (row.status === "REQUESTED" || row.status === "APPROVED" || row.status === "WAITLISTED") {
+    bits.push(`<button class="danger small" data-act="cancel" data-id="${row.id}" type="button">Cancel</button>`);
+  }
+  if (incoming && row.status === "REQUESTED") {
+    bits.push(`<button class="small" data-act="approve" data-id="${row.id}" type="button">Approve</button>`);
+    bits.push(`<button class="secondary small" data-act="reject" data-id="${row.id}" type="button">Reject</button>`);
+  }
+  if (row.status === "APPROVED" && !incoming) {
+    bits.push(`<button class="teal small" data-act="pickup" data-id="${row.id}" type="button">Confirm pickup</button>`);
+  }
+  return bits.join(" ");
+}
+async function load() {
+  const mine = await api("/api/reservations/my");
+  const incoming = await api("/api/reservations/incoming");
+  document.getElementById("mine").innerHTML = mine.map(row => `<tr><td>${escapeHtml(row.listingTitle)}<br/><span class="note">${escapeHtml(row.assetCode)}</span></td><td>${when(row.startAt)}<br/>${when(row.endAt)}</td><td>${badge(row.status)} ${row.queuePosition ? `<span class="note">#${row.queuePosition}</span>` : ""}<br/><span class="note">${escapeHtml(row.decisionNote || "")}</span></td><td>${actions(row, false)}</td></tr>`).join("") || emptyRow(4, "You have no reservations.");
+  document.getElementById("incoming").innerHTML = incoming.map(row => `<tr><td>${escapeHtml(row.borrowerName)}</td><td>${escapeHtml(row.listingTitle)}<br/><span class="note">${when(row.startAt)}</span></td><td>${badge(row.status)}</td><td>${actions(row, true)}</td></tr>`).join("") || emptyRow(4, "No one has requested your units.");
+  document.querySelectorAll("[data-act]").forEach(btn => btn.onclick = async () => {
+    try {
+      if (btn.dataset.act === "pickup") {
+        await api("/api/borrowings/" + btn.dataset.id + "/pickup", { method: "POST" });
+        toast("Pickup recorded");
+        location.href = "/borrowings.html";
+        return;
+      }
+      if (btn.dataset.act === "reject") {
+        const note = prompt("Reason for rejection", "");
+        if (note == null) return;
+        await api("/api/reservations/" + btn.dataset.id + "/reject", { method: "POST", body: { note } });
+      } else {
+        await api("/api/reservations/" + btn.dataset.id + "/" + btn.dataset.act, { method: "POST" });
+      }
+      toast("Updated");
+      load();
+    } catch (err) { toast(err.message, true); }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => load().catch(err => toast(err.message, true)));
+</script>
+
+</body></html>

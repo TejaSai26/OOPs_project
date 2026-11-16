@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Borrowings</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Loans</p>
+<h1>Borrowing history</h1>
+<div class="table-wrap card"><table><thead><tr><th>Item</th><th>Picked up</th><th>Due</th><th>Returned</th><th>Charge</th><th>Penalty</th><th>Condition</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+<section class="card" style="margin-top:16px" id="return-box" hidden>
+  <h2>Return <span id="return-title"></span></h2>
+  <form id="return-form">
+    <input type="hidden" name="borrowingId"/>
+    <label><input name="damaged" type="checkbox" style="width:auto"/> Damage to report</label>
+    <label>Condition coming back</label>
+    <select name="condition"><option>GOOD</option><option>NEW</option><option>FAIR</option><option>DAMAGED</option></select>
+    <label>Damage note</label><textarea name="damageNote"></textarea>
+    <label>Photograph</label><input name="photo" type="file" accept="image/*"/>
+    <button type="submit">Confirm return</button>
+  </form>
+</section>
+<section class="card" style="margin-top:16px" id="review-box" hidden>
+  <h2>Review a completed loan</h2>
+  <form id="review-form" class="row">
+    <select name="borrowingId" id="review-id"></select>
+    <select name="rating"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select>
+    <input name="comment" placeholder="What should the next borrower know?"/>
+    <button type="submit">Publish review</button>
+  </form>
+</section>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const rows = await api("/api/borrowings/my");
+  document.getElementById("rows").innerHTML = rows.map(row => `<tr>
+    <td>${escapeHtml(row.listingTitle)}<br/><span class="note">${escapeHtml(row.assetCode)}</span></td>
+    <td>${when(row.pickedUpAt)}</td><td>${when(row.dueAt)}</td><td>${when(row.returnedAt)}</td>
+    <td>${money(row.chargeAmount)} ${badge(row.paymentStatus)}</td>
+    <td>${money(row.penaltyAmount)} ${badge(row.penaltyStatus)}</td>
+    <td>${badge(row.conditionOut)} → ${badge(row.conditionIn)}</td>
+    <td>${row.status !== "RETURNED" ? `<button class="small ret" data-id="${row.id}" data-title="${escapeHtml(row.listingTitle)}" type="button">Return</button>` : ""}</td>
+  </tr>`).join("") || emptyRow(8, "You have not picked anything up yet.");
+  const returned = rows.filter(r => r.status === "RETURNED");
+  const box = document.getElementById("review-box");
+  box.hidden = returned.length === 0;
+  document.getElementById("review-id").innerHTML = returned.map(r => `<option value="${r.id}">${escapeHtml(r.listingTitle)} · ${escapeHtml(r.assetCode)}</option>`).join("");
+  document.querySelectorAll(".ret").forEach(btn => btn.onclick = () => {
+    const form = document.getElementById("return-form");
+    form.borrowingId.value = btn.dataset.id;
+    document.getElementById("return-title").textContent = btn.dataset.title;
+    document.getElementById("return-box").hidden = false;
+    form.scrollIntoView({ behavior: "smooth" });
+  });
+}
+document.addEventListener("DOMContentLoaded", () => {
+  load().catch(err => toast(err.message, true));
+  document.getElementById("return-form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const form = ev.target;
+    try {
+      let photoRef = null;
+      if (form.photo.files[0]) {
+        const body = new FormData();
+        body.append("file", form.photo.files[0]);
+        photoRef = (await api("/api/uploads", { method: "POST", body })).url;
+      }
+      await api("/api/borrowings/" + form.borrowingId.value + "/return", { method: "POST", body: {
+        damaged: form.damaged.checked, damageNote: form.damageNote.value, condition: form.condition.value, photoRef
+      }});
+      toast("Return recorded");
+      form.reset();
+      document.getElementById("return-box").hidden = true;
+      load();
+    } catch (err) { toast(err.message, true); }
+  };
+  document.getElementById("review-form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const data = Object.fromEntries(new FormData(ev.target).entries());
+    data.borrowingId = Number(data.borrowingId);
+    data.rating = Number(data.rating);
+    try { await api("/api/reviews", { method: "POST", body: data }); toast("Review saved"); }
+    catch (err) { toast(err.message, true); }
+  };
+});
+</script>
+
+</body></html>

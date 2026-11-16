@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Reservations</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="admin">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Administration</p><h1>All reservations</h1>
+<div class="table-wrap card"><table><thead><tr><th>Borrower</th><th>Item</th><th>Window</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const rows = await api("/api/admin/reservations");
+  document.getElementById("rows").innerHTML = rows.map(row => `<tr>
+    <td>${escapeHtml(row.borrowerName)}</td>
+    <td>${escapeHtml(row.listingTitle)} · ${escapeHtml(row.assetCode)}</td>
+    <td>${when(row.startAt)}<br/>${when(row.endAt)}</td>
+    <td>${badge(row.status)} <span class="note">${escapeHtml(row.decisionNote || "")}</span></td>
+    <td>${["REQUESTED","APPROVED","WAITLISTED"].includes(row.status) ? `<button class="danger small cancel" data-id="${row.id}" type="button">Cancel</button>` : ""}</td>
+  </tr>`).join("") || emptyRow(5, "No reservations.");
+  document.querySelectorAll(".cancel").forEach(btn => btn.onclick = async () => {
+    try { await api("/api/reservations/" + btn.dataset.id + "/cancel", { method: "POST" }); toast("Cancelled"); load(); }
+    catch (err) { toast(err.message, true); }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => load().catch(err => toast(err.message, true)));
+</script>
+
+</body></html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Penalties</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Late fees</p>
+<h1>Penalty history</h1>
+<p id="balance" class="lede"></p>
+<div class="table-wrap card"><table><thead><tr><th>Item</th><th>Amount</th><th>Status</th><th>Reason</th><th>When</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const balance = await api("/api/penalties/balance");
+  document.getElementById("balance").textContent = "Outstanding simulated balance " + money(balance.outstanding) + ". Payments are recorded, not charged to a bank.";
+  const rows = await api("/api/penalties/my");
+  document.getElementById("rows").innerHTML = rows.map(row => `<tr>
+    <td>${escapeHtml(row.listingTitle)}<br/><span class="note">${escapeHtml(row.assetCode)}</span></td>
+    <td>${money(row.amount)}</td><td>${badge(row.paymentStatus)}</td>
+    <td>${escapeHtml(row.reason)}${row.waivedReason ? `<br/><span class="note">Waiver: ${escapeHtml(row.waivedReason)}</span>` : ""}</td>
+    <td>${when(row.createdAt)}</td>
+    <td>${row.paymentStatus === "UNPAID" ? `<button class="small pay" data-id="${row.id}" data-amount="${row.amount}" type="button">Pay ${money(row.amount)}</button>` : ""}</td>
+  </tr>`).join("") || emptyRow(6, "No penalties on your account.");
+  document.querySelectorAll(".pay").forEach(btn => btn.onclick = async () => {
+    try {
+      await api("/api/penalties/" + btn.dataset.id + "/pay", { method: "POST", body: { amount: Number(btn.dataset.amount) } });
+      toast("Payment recorded");
+      load();
+    } catch (err) { toast(err.message, true); }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => load().catch(err => toast(err.message, true)));
+</script>
+
+</body></html>

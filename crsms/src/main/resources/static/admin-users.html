@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>People</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="admin">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Administration</p><h1>People</h1>
+<div class="table-wrap card"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const me = await api("/api/users/me");
+  const rows = await api("/api/admin/users");
+  document.getElementById("rows").innerHTML = rows.map(row => `<tr>
+    <td>${escapeHtml(row.fullName)}<br/><span class="note">${escapeHtml(row.memberLabel || row.department || "")}</span></td>
+    <td>${escapeHtml(row.email)}</td><td>${escapeHtml(row.role)}</td><td>${badge(row.accountStatus)}</td>
+    <td>${row.id === me.id ? "" : `<button class="small status" data-id="${row.id}" data-next="${row.accountStatus === "ACTIVE" ? "DEACTIVATED" : "ACTIVE"}" type="button">${row.accountStatus === "ACTIVE" ? "Deactivate" : "Activate"}</button>`}</td>
+  </tr>`).join("");
+  document.querySelectorAll(".status").forEach(btn => btn.onclick = async () => {
+    try { await api("/api/admin/users/" + btn.dataset.id + "/status", { method: "PUT", body: { accountStatus: btn.dataset.next } }); toast("Account updated"); load(); }
+    catch (err) { toast(err.message, true); }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => load().catch(err => toast(err.message, true)));
+</script>
+
+</body></html>

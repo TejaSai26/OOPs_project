@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Analytics</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="admin">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Administration</p>
+<h1>Campus analytics</h1>
+<p class="lede">Every figure is counted from current database rows. Months with no activity show zero.</p>
+<div id="stats" class="grid stats"></div>
+<div class="grid split">
+  <section class="card"><h2>Reservations and loans</h2><canvas id="trend" height="120"></canvas><div id="trend-fallback"></div></section>
+  <section class="card"><h2>Who is registered</h2><canvas id="roles" height="140"></canvas><div id="roles-fallback"></div></section>
+</div>
+<div class="grid split" style="margin-top:16px">
+  <section class="card"><h2>Popular resources</h2><div id="popular"></div></section>
+  <section class="card"><h2>Categories</h2><div id="categories"></div></section>
+</div>
+</main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script src="/js/api.js"></script>
+<script>
+function bars(el, pairs) {
+  if (!pairs.length) { el.innerHTML = `<p class="empty">No rows yet.</p>`; return; }
+  const max = Math.max(...pairs.map(p => p[1]), 1);
+  el.innerHTML = pairs.map(([name, count]) => `<p>${escapeHtml(name)} <strong>${count}</strong></p><div style="background:#e6eeec;border-radius:999px;height:8px;margin-bottom:8px"><div style="width:${Math.round(count / max * 100)}%;background:#0f766e;height:8px;border-radius:999px"></div></div>`).join("");
+}
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const a = await api("/api/admin/analytics");
+    const cards = [
+      ["People", a.totalUsers], ["Students", a.students], ["Faculty", a.faculty], ["Staff", a.staff],
+      ["Listings", a.totalListings], ["Units", a.totalUnits], ["Available", a.availableUnits], ["On loan", a.borrowedUnits],
+      ["Overdue", a.overdueBorrowings], ["In maintenance", a.maintenanceUnits],
+      ["Simulated revenue", money(a.totalRevenue)], ["Penalties outstanding", money(a.outstandingPenalties)]
+    ];
+    document.getElementById("stats").innerHTML = cards.map(([l,v]) => `<article class="card stat"><strong>${v}</strong><span>${l}</span></article>`).join("");
+    bars(document.getElementById("popular"), a.topResources.map(r => [r.category, r.borrowings]));
+    bars(document.getElementById("categories"), a.topCategories.map(r => [r.category, r.borrowings]));
+    const labels = a.reservationTrend.map(p => p.year + "-" + String(p.month).padStart(2, "0"));
+    if (window.Chart) {
+      new Chart(document.getElementById("trend"), { type: "line", data: { labels, datasets: [
+        { label: "Reservations", data: a.reservationTrend.map(p => p.count), borderColor: "#10243f", tension: .3 },
+        { label: "Borrowings", data: a.borrowingTrend.map(p => p.count), borderColor: "#0f766e", tension: .3 }
+      ]}, options: { plugins: { legend: { position: "bottom" } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+      new Chart(document.getElementById("roles"), { type: "doughnut", data: { labels: ["Students","Faculty","Staff","Admins"],
+        datasets: [{ data: [a.students, a.faculty, a.staff, a.admins], backgroundColor: ["#10243f","#0f766e","#b7791f","#7c93a8"] }] } });
+    } else {
+      document.getElementById("trend-fallback").innerHTML = labels.map((l,i) => `<p>${l}: ${a.reservationTrend[i].count} reservations, ${a.borrowingTrend[i].count} loans</p>`).join("");
+    }
+  } catch (err) { toast(err.message, true); }
+});
+</script>
+
+</body></html>

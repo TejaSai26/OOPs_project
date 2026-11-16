@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Maintenance</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Condition</p>
+<h1>Report damage</h1>
+<form id="form" class="card" style="max-width:640px">
+  <label>Unit id</label><input name="unitId" type="number" min="1" required/>
+  <label>What happened</label><textarea name="description" required></textarea>
+  <label>Photograph</label><input name="photo" type="file" accept="image/*"/>
+  <button type="submit">Submit report</button>
+</form>
+<h2>My reports</h2>
+<div class="table-wrap card"><table><thead><tr><th>Unit</th><th>Status</th><th>Note</th><th>Opened</th></tr></thead><tbody id="rows"></tbody></table></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const rows = await api("/api/maintenance/my");
+  document.getElementById("rows").innerHTML = rows.map(row => `<tr><td>${escapeHtml(row.assetCode)}<br/>${escapeHtml(row.listingTitle)}</td><td>${badge(row.status)} ${badge(row.unitStatus)}</td><td>${escapeHtml(row.description)}</td><td>${when(row.createdAt)}</td></tr>`).join("") || emptyRow(4, "You have not filed a report.");
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const preset = new URLSearchParams(location.search).get("unitId");
+  if (preset) document.querySelector("[name=unitId]").value = preset;
+  load().catch(err => toast(err.message, true));
+  document.getElementById("form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const form = ev.target;
+    try {
+      let photoRef = null;
+      if (form.photo.files[0]) {
+        const body = new FormData();
+        body.append("file", form.photo.files[0]);
+        photoRef = (await api("/api/uploads", { method: "POST", body })).url;
+      }
+      await api("/api/maintenance", { method: "POST", body: { unitId: Number(form.unitId.value), description: form.description.value, photoRef } });
+      toast("Report filed");
+      form.reset();
+      load();
+    } catch (err) { toast(err.message, true); }
+  };
+});
+</script>
+
+</body></html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>My listings</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="user">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Owner</p>
+<h1>My listings</h1>
+<div class="actions"><a class="btn" href="/listing-form.html">New listing</a></div>
+<div id="list"></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const data = await api("/api/my/listings?size=50");
+  document.getElementById("list").innerHTML = data.items.length ? data.items.map(item => `
+    <article class="card" style="margin-top:12px">
+      <h3>${escapeHtml(item.title)} ${badge(item.listingStatus)}</h3>
+      <p class="note">${escapeHtml(item.category)} · ${item.pricingType} ${money(item.rate)} · ${stars(item.averageRating)}</p>
+      <div class="table-wrap"><table><thead><tr><th>Unit</th><th>Condition</th><th>Status</th><th>Where</th></tr></thead>
+      <tbody>${item.units.map(u => `<tr><td>${escapeHtml(u.assetCode)}</td><td>${badge(u.condition)}</td><td>${badge(u.status)}</td><td>${escapeHtml(u.locationNote || "")}</td></tr>`).join("") || emptyRow(4, "No units yet")}</tbody></table></div>
+      <form class="unit row" data-id="${item.id}">
+        <input name="assetCode" placeholder="Asset code" required/>
+        <select name="condition"><option>GOOD</option><option>NEW</option><option>FAIR</option></select>
+        <input name="locationNote" placeholder="Location"/>
+        <button type="submit">Add unit</button>
+      </form>
+      <div class="actions">
+        <a class="btn secondary small" href="/listing-form.html?id=${item.id}">Edit</a>
+        <button class="danger small off" data-id="${item.id}" type="button">Deactivate</button>
+      </div>
+    </article>`).join("") : `<p class="empty">You have not listed anything yet.</p>`;
+  document.querySelectorAll("form.unit").forEach(form => form.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const body = Object.fromEntries(new FormData(form).entries());
+    try { await api("/api/listings/" + form.dataset.id + "/units", { method: "POST", body }); toast("Unit added"); load(); }
+    catch (err) { toast(err.message, true); }
+  });
+  document.querySelectorAll("button.off").forEach(btn => btn.onclick = async () => {
+    try { await api("/api/listings/" + btn.dataset.id, { method: "DELETE" }); toast("Listing deactivated"); load(); }
+    catch (err) { toast(err.message, true); }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => load().catch(err => toast(err.message, true)));
+</script>
+
+</body></html>

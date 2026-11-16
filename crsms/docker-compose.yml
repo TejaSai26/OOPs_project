@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: crsms
+      POSTGRES_USER: crsms
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-crsms}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crsms -d crsms"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DATABASE_URL: jdbc:postgresql://db:5432/crsms
+      DATABASE_USERNAME: crsms
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-crsms}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@campus.edu}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 50s
+volumes:
+  pgdata:

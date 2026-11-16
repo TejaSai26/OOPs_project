@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Campus Resource Hub</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<main>
+  <section class="hero">
+    <div>
+      <p class="kicker">University sharing desk</p>
+      <h1>Borrow what the campus already owns.</h1>
+      <p class="lede">Students, faculty, and staff list bicycles, laptops, books, lab kits, and projectors. Reserve a real unit, pick it up, and return it with a condition note. Charges and penalties are simulated for coursework, never a payment gateway.</p>
+      <div class="actions"><a class="btn" href="/browse.html">Browse the catalogue</a><a class="btn secondary" href="/register.html">Create an account</a></div>
+    </div>
+    <div class="hero-panel">
+      <p class="kicker">Live catalogue</p>
+      <h2 id="live-count">Loading listings…</h2>
+      <p>Counts come from the database, not a sample card.</p>
+      <div id="live-cats"></div>
+    </div>
+  </section>
+  <h2>Available right now</h2>
+  <div id="featured" class="grid cards"></div>
+</main>
+
+
+<script src="/js/api.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const cats = await api("/api/categories");
+    document.getElementById("live-cats").innerHTML = cats.map(c => `<span class="badge">${escapeHtml(c.name)}</span>`).join(" ");
+    const page = await api("/api/listings?size=6&availableOnly=false");
+    document.getElementById("live-count").textContent = page.total + " active listing" + (page.total === 1 ? "" : "s");
+    document.getElementById("featured").innerHTML = page.items.length ? page.items.map(item => `
+      <article class="card">
+        <p class="kicker">${escapeHtml(item.category)}</p>
+        <h3>${escapeHtml(item.title)}</h3>
+        <p class="muted">${escapeHtml(item.ownerName)} · ${item.pricingType} ${money(item.rate)}</p>
+        <p>${item.availableCount} unit${item.availableCount === 1 ? "" : "s"} free · ${stars(item.averageRating)}</p>
+        <a class="btn small" href="/listing.html?id=${item.id}">View</a>
+      </article>`).join("") : `<p class="empty">No listings yet. Sign in and add the first one.</p>`;
+  } catch (err) { toast(err.message, true); }
+});
+</script>
+
+</body></html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Sign in</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Account</p>
+<h1>Sign in</h1>
+<p class="lede">Use the campus account you registered. Demonstration passwords are seeded only when the demo profile is on.</p>
+<form id="form" class="card" style="max-width:460px">
+  <label>Email</label><input name="email" type="email" required autocomplete="username"/>
+  <label>Password</label><input name="password" type="password" required autocomplete="current-password"/>
+  <div class="actions"><button type="submit">Sign in</button><a class="btn secondary" href="/register.html">Register</a></div>
+</form>
+<div class="card" style="max-width:460px;margin-top:16px">
+  <h3>Demonstration accounts</h3>
+  <p class="note">alice@campus.edu / Student@123 · bob@campus.edu / Student@123 · carol@campus.edu / Faculty@123 · admin@campus.edu / changeme</p>
+</div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+document.getElementById("form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const data = Object.fromEntries(new FormData(ev.target).entries());
+  try {
+    const me = await api("/api/auth/login", { method: "POST", body: data });
+    const next = new URLSearchParams(location.search).get("next");
+    const home = { STUDENT: "/student.html", FACULTY: "/faculty.html", STAFF: "/staff.html", ADMIN: "/admin.html" };
+    location.href = next || home[me.role] || "/browse.html";
+  } catch (err) { toast(err.message, true); }
+};
+</script>
+
+</body></html>

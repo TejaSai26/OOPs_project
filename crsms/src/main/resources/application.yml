@@ -1,0 +1,39 @@
+server:
+  port: ${PORT:8080}
+  address: 0.0.0.0
+
+spring:
+  application:
+    name: crsms
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
+
+crsms:
+  seed-admin: true
+  seed-demo: true
+  uploads-dir: ${UPLOADS_DIR:data/uploads}
+  jobs:
+    enabled: true
+    delay-ms: 60000
+  admin:
+    email: ${ADMIN_EMAIL:admin@campus.edu}
+    password: ${ADMIN_PASSWORD:changeme}
+    name: ${ADMIN_NAME:Campus Administrator}

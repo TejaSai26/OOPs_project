@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="refresh" content="0; url=/student.html"/>
+  <title>Desk</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <script src="/js/api.js"></script>
+</head>
+<body>
+  <p>Opening your desk…</p>
+  <script>
+    api("/api/users/me").then(me => {
+      const home = { STUDENT: "/student.html", FACULTY: "/faculty.html", STAFF: "/staff.html", ADMIN: "/admin.html" };
+      location.replace(home[me.role] || "/browse.html");
+    }).catch(() => location.replace("/login.html"));
+  </script>
+</body>
+</html>

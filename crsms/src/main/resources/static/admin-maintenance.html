@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Maintenance</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body data-auth="admin">
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker">Administration</p><h1>Maintenance queue</h1>
+<div id="list"></div>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+async function load() {
+  const rows = await api("/api/admin/maintenance");
+  const people = await api("/api/admin/users");
+  const staff = people.filter(p => p.role === "STAFF" || p.role === "ADMIN");
+  document.getElementById("list").innerHTML = rows.map(row => `
+    <form class="card ticket" data-id="${row.id}" style="margin-bottom:12px">
+      <h3>${escapeHtml(row.assetCode)} · ${escapeHtml(row.listingTitle)} ${badge(row.status)}</h3>
+      <p>${escapeHtml(row.description)}</p>
+      <p class="note">Reported by ${escapeHtml(row.reporterName)} · ${when(row.createdAt)} · unit ${escapeHtml(row.unitStatus)}${row.photoRef ? ` · <a href="${escapeHtml(row.photoRef)}">photo</a>` : ""}</p>
+      <div class="row">
+        <div><label>Status</label><select name="status"><option ${row.status==="OPEN"?"selected":""}>OPEN</option><option ${row.status==="IN_PROGRESS"?"selected":""}>IN_PROGRESS</option><option ${row.status==="RESOLVED"?"selected":""}>RESOLVED</option><option ${row.status==="REJECTED"?"selected":""}>REJECTED</option></select></div>
+        <div><label>Assign</label><select name="assigneeId"><option value="">Unassigned</option>${staff.map(p => `<option value="${p.id}">${escapeHtml(p.fullName)}</option>`).join("")}</select></div>
+        <div><label>Repair cost</label><input name="repairCost" type="number" min="0" step="0.01" value="${row.repairCost ?? ""}"/></div>
+      </div>
+      <label>Note</label><textarea name="adminNote">${escapeHtml(row.adminNote || "")}</textarea>
+      <button type="submit">Save update</button>
+    </form>`).join("") || `<p class="empty">The queue is clear.</p>`;
+  document.querySelectorAll("form.ticket").forEach(form => form.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    if (!data.assigneeId) delete data.assigneeId; else data.assigneeId = Number(data.assigneeId);
+    if (data.repairCost === "") delete data.repairCost; else data.repairCost = Number(data.repairCost);
+    try { await api("/api/maintenance/" + form.dataset.id, { method: "PUT", body: data }); toast("Maintenance updated"); load(); }
+    catch (err) { toast(err.message, true); }
+  });
+}
+document.addEventListener("DOMContentLoaded", () => load().catch(err => toast(err.message, true)));
+</script>
+
+</body></html>

@@ -1,0 +1,5 @@
+/workspace/crsms/src/test/java/com/crsms/penalty/PenaltyStrategyTest.java
+/workspace/crsms/src/test/java/com/crsms/pricing/PricingStrategyTest.java
+/workspace/crsms/src/test/java/com/crsms/reservation/ReservationTransitionTest.java
+/workspace/crsms/src/test/java/com/crsms/service/CampusAcceptanceTest.java
+/workspace/crsms/src/test/java/com/crsms/service/CampusFlowTest.java

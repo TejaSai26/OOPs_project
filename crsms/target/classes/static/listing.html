@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Resource</title>
+  <link rel="icon" href="/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@400;560;650&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+<header class="top"><a class="brand" href="/index.html">Campus <span>Resource Hub</span></a><nav data-nav></nav></header>
+<div class="shell"><aside class="side" data-side></aside><main>
+
+<p class="kicker" id="category">Listing</p>
+<h1 id="title">Loading…</h1>
+<p id="desc" class="lede"></p>
+<p id="meta" class="note"></p>
+<div id="units" class="grid cards"></div>
+<section class="card" id="reserve-card" style="margin-top:16px">
+  <h2>Check a window</h2>
+  <div class="row">
+    <div><label>Unit</label><select id="unit"></select></div>
+    <div><label>Start</label><input id="start" type="datetime-local" required/></div>
+    <div><label>End</label><input id="end" type="datetime-local" required/></div>
+  </div>
+  <label><input id="wait" type="checkbox" style="width:auto"/> Join the waiting list if that window is taken</label>
+  <div class="actions">
+    <button id="check" class="secondary" type="button">Check availability</button>
+    <button id="book" type="button">Request reservation</button>
+  </div>
+  <p id="avail" class="note"></p>
+</section>
+<section style="margin-top:16px" class="card">
+  <h2>Reviews</h2>
+  <div id="reviews"></div>
+</section>
+</main></div>
+
+<script src="/js/api.js"></script>
+<script>
+function iso(value) { return new Date(value).toISOString(); }
+document.addEventListener("DOMContentLoaded", async () => {
+  const id = new URLSearchParams(location.search).get("id");
+  if (!id) { location.href = "/browse.html"; return; }
+  try {
+    const item = await api("/api/listings/" + id);
+    document.getElementById("category").textContent = item.category;
+    document.getElementById("title").textContent = item.title;
+    document.getElementById("desc").textContent = item.description;
+    document.getElementById("meta").innerHTML = `${escapeHtml(item.ownerName)} · ${item.pricingType} ${money(item.rate)} · owner reputation ${item.ownerRating == null ? "n/a" : Number(item.ownerRating).toFixed(1)} · ${stars(item.averageRating)}`;
+    document.getElementById("units").innerHTML = item.units.length ? item.units.map(unit => `
+      <article class="card">
+        <h3>${escapeHtml(unit.assetCode)}</h3>
+        <p>${badge(unit.condition)} ${badge(unit.status)}</p>
+        <p class="note">${escapeHtml(unit.locationNote || "No location note")}</p>
+        <button class="secondary small history" data-id="${unit.id}" type="button">Condition history</button>
+        <div class="history-box" id="hist-${unit.id}"></div>
+      </article>`).join("") : `<p class="empty">No physical units yet.</p>`;
+    document.getElementById("unit").innerHTML = item.units.map(unit => `<option value="${unit.id}">${escapeHtml(unit.assetCode)} · ${unit.status}</option>`).join("");
+    document.querySelectorAll(".history").forEach(btn => btn.onclick = async () => {
+      const box = document.getElementById("hist-" + btn.dataset.id);
+      try {
+        const rows = await api("/api/units/" + btn.dataset.id + "/history");
+        box.innerHTML = rows.length ? `<ul>${rows.map(r => `<li>${when(r.recordedAt)} · ${escapeHtml(r.phase)} · ${escapeHtml(r.condition)} · ${escapeHtml(r.note || "")} ${r.photoRef ? `<a href="${escapeHtml(r.photoRef)}">photo</a>` : ""}</li>`).join("")}</ul>` : `<p class="note">No condition notes yet.</p>`;
+      } catch (err) { toast(err.message, true); }
+    });
+    const reviews = await api("/api/reviews/listing/" + id);
+    document.getElementById("reviews").innerHTML = reviews.reviews.length ? reviews.reviews.map(r => `
+      <p><strong>${escapeHtml(r.reviewerName)}</strong> ${stars(r.rating)} <span class="note">${when(r.createdAt)}</span><br/>${escapeHtml(r.comment || "")}</p>`).join("") : `<p class="empty">No verified reviews yet.</p>`;
+    async function windowBody() {
+      const unitId = document.getElementById("unit").value;
+      const start = document.getElementById("start").value;
+      const end = document.getElementById("end").value;
+      if (!unitId || !start || !end) throw new Error("Choose a unit and both times");
+      return { unitId: Number(unitId), startAt: iso(start), endAt: iso(end) };
+    }
+    document.getElementById("check").onclick = async () => {
+      try {
+        const body = await windowBody();
+        const result = await api(`/api/units/${body.unitId}/availability?startAt=${encodeURIComponent(body.startAt)}&endAt=${encodeURIComponent(body.endAt)}`);
+        document.getElementById("avail").textContent = result.available
+          ? "That window is free."
+          : `Not free (${result.overlaps} overlap, unit ${result.unitStatus}, condition ${result.condition}).`;
+      } catch (err) { toast(err.message, true); }
+    };
+    document.getElementById("book").onclick = async () => {
+      try {
+        const body = await windowBody();
+        body.joinWaitlist = document.getElementById("wait").checked;
+        const saved = await api("/api/reservations", { method: "POST", body });
+        toast(saved.status === "WAITLISTED" ? "Added to the waiting list" : "Request sent to the owner");
+        location.href = "/reservations.html";
+      } catch (err) { toast(err.message, true); }
+    };
+  } catch (err) { toast(err.message, true); }
+});
+</script>
+
+</body></html>
